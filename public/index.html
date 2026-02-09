@@ -3,61 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Importação de Notas Fiscais - Piccolotur</title>
+    <title>Termo de Responsabilidade - Piccolotur</title>
     <link rel="stylesheet" href="css/styles.css">
-    </style>
 </head>
 <body>
 
-    <img src="./img/piccolotur_image.png" alt="Piccolotur Logo" style="display: block; margin: 0 auto 20px auto; max-width: 200px;">
+    <img src="./img/piccolotur_image.png" alt="Piccolotur Logo" class="logo">
 
     <div class="container">
-        <h1>Importação de Códigos de Barras de NF-e e Boletos</h1>
-        <p>Escolha os arquivos PDF para extração dos códigos de barras e QR codes.</p>
+        <h1>Termo de Responsabilidade de Equipamentos</h1>
+        <p>Faça upload do arquivo TXT com os dados do equipamento para preencher a tabela e gerar o termo.</p>
 
-        <form id="uploadForm" action="/upload-pdfs" method="POST" enctype="multipart/form-data">
-            <input type="file" name="pdfs" accept=".pdf" multiple required>
-            <button type="submit">Processar e Gerar Excel</button>
+        <form id="uploadForm" class="card">
+            <div class="form-group">
+                <label for="txtFile">Arquivo TXT</label>
+                <input type="file" id="txtFile" name="txtFile" accept=".txt" required>
+            </div>
         </form>
+
+        <section class="card">
+            <h2>Dados do colaborador</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="nome">Nome</label>
+                    <input type="text" id="nome" placeholder="Digite o nome completo">
+                </div>
+                <div class="form-group">
+                    <label for="responsavel">Responsável</label>
+                    <input type="text" id="responsavel" placeholder="Responsável pela entrega">
+                </div>
+                <div class="form-group">
+                    <label for="ramal">Ramal</label>
+                    <input type="text" id="ramal" placeholder="Ex: 1234">
+                </div>
+                <div class="form-group">
+                    <label for="celular">Celular corporativo</label>
+                    <input type="text" id="celular" placeholder="(00) 90000-0000">
+                </div>
+                <div class="form-group">
+                    <label for="modelo">Modelo</label>
+                    <input type="text" id="modelo" placeholder="Ex: Dell Latitude 5440">
+                </div>
+                <div class="form-group">
+                    <label for="pulsus">Código Pulsus</label>
+                    <input type="text" id="pulsus" placeholder="Ex: M234">
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Equipamentos identificados</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Serial</th>
+                            <th>Hostname</th>
+                            <th>MACs</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parsedTable">
+                        <tr>
+                            <td colspan="3" class="empty-state">Faça upload do TXT para visualizar os dados.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="actions">
+            <button type="button" id="generateTerm">Gerar/Imprimir Termo</button>
+        </div>
 
         <div id="status"></div>
     </div>
 
-    <script>
-        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerHTML = 'Processando, aguarde... (Isso pode levar alguns segundos por PDF)';
-            statusDiv.className = '';
-
-            try {
-                const formData = new FormData(this);
-                
-                const response = await fetch('/upload-pdfs', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    statusDiv.innerHTML = `✅ Sucesso! O arquivo ${result.filename} foi gerado.`;
-                    statusDiv.className = 'success';
-                    
-                    // Opcional: oferecer download do arquivo
-                    window.location.href = result.downloadUrl; 
-                } else {
-                    statusDiv.innerHTML = `❌ Erro no Servidor: ${result.message}`;
-                    statusDiv.className = 'error';
-                }
-            } catch (error) {
-                statusDiv.innerHTML = `❌ Erro de Conexão: ${error.message}`;
-                statusDiv.className = 'error';
-            }
-        });
-    </script>
-
     <footer class="footer">
         <p>&copy; 2025 Lucas Paranhos. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        const txtFileInput = document.getElementById('txtFile');
+        const parsedTable = document.getElementById('parsedTable');
+        const statusDiv = document.getElementById('status');
+        const generateButton = document.getElementById('generateTerm');
+
+        const fields = {
+            nome: document.getElementById('nome'),
+            responsavel: document.getElementById('responsavel'),
+            ramal: document.getElementById('ramal'),
+            celular: document.getElementById('celular'),
+            modelo: document.getElementById('modelo'),
+            pulsus: document.getElementById('pulsus')
+        };
+
+        const macRegex = /([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}/g;
+
+        function extractValue(line) {
+            const parts = line.split(':');
+            if (parts.length > 1) {
+                return parts.slice(1).join(':').trim();
+            }
+            return line.trim();
+        }
+
+        function parseBlocks(text) {
+            const blocks = text.split(/\n\s*\n/).map(block => block.trim()).filter(Boolean);
+            if (!blocks.length) {
+                return [];
+            }
+
+            return blocks.map(block => {
+                const lines = block.split(/\r?\n/);
+                let serial = '';
+                let hostname = '';
+                const macs = new Set();
+
+                lines.forEach(line => {
+                    if (!serial && /serial/i.test(line)) {
+                        serial = extractValue(line.replace(/serial/i, '').trim());
+                    }
+                    if (!hostname && /host(name)?/i.test(line)) {
+                        hostname = extractValue(line.replace(/host(name)?/i, '').trim());
+                    }
+                    const matches = line.match(macRegex);
+                    if (matches) {
+                        matches.forEach(mac => macs.add(mac.toUpperCase()));
+                    }
+                });
+
+                if (!macs.size) {
+                    const allMatches = block.match(macRegex) || [];
+                    allMatches.forEach(mac => macs.add(mac.toUpperCase()));
+                }
+
+                return {
+                    serial: serial || 'Não informado',
+                    hostname: hostname || 'Não informado',
+                    macs: macs.size ? Array.from(macs).join(', ') : 'Não informado'
+                };
+            });
+        }
+
+        function renderTable(rows) {
+            parsedTable.innerHTML = '';
+
+            if (!rows.length) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = '<td colspan="3" class="empty-state">Nenhum dado identificado no TXT.</td>';
+                parsedTable.appendChild(emptyRow);
+                return;
+            }
+
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.serial}</td>
+                    <td>${row.hostname}</td>
+                    <td>${row.macs}</td>
+                `;
+                parsedTable.appendChild(tr);
+            });
+        }
+
+        function readTxtFile(file) {
+            const reader = new FileReader();
+            reader.onload = event => {
+                const content = event.target.result;
+                const rows = parseBlocks(content);
+                renderTable(rows);
+                statusDiv.textContent = rows.length
+                    ? `✅ ${rows.length} item(s) carregado(s) com sucesso.`
+                    : '⚠️ Nenhum item foi encontrado no arquivo.';
+                statusDiv.className = rows.length ? 'success' : 'warning';
+            };
+            reader.onerror = () => {
+                statusDiv.textContent = '❌ Não foi possível ler o arquivo.';
+                statusDiv.className = 'error';
+            };
+            reader.readAsText(file);
+        }
+
+        txtFileInput.addEventListener('change', event => {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+            readTxtFile(file);
+        });
+
+        generateButton.addEventListener('click', () => {
+            const rows = Array.from(parsedTable.querySelectorAll('tr'))
+                .filter(row => !row.querySelector('.empty-state'))
+                .map(row => {
+                    const cells = row.querySelectorAll('td');
+                    return {
+                        serial: cells[0]?.textContent || '-',
+                        hostname: cells[1]?.textContent || '-',
+                        macs: cells[2]?.textContent || '-'
+                    };
+                });
+
+            const now = new Date();
+            const date = now.toLocaleDateString('pt-BR');
+
+            const termoHtml = `
+                <html lang="pt-br">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Termo de Responsabilidade</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 24px; color: #1f2933; }
+                        h1 { text-align: center; margin-bottom: 8px; }
+                        .meta { margin-bottom: 16px; }
+                        .meta strong { display: inline-block; min-width: 160px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+                        th, td { border: 1px solid #cbd2d9; padding: 8px; text-align: left; }
+                        th { background: #f5f7fa; }
+                        .signatures { margin-top: 32px; display: flex; justify-content: space-between; }
+                        .signature { width: 45%; text-align: center; }
+                        .signature div { border-top: 1px solid #1f2933; margin-top: 48px; padding-top: 8px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Termo de Responsabilidade</h1>
+                    <p class="meta"><strong>Data:</strong> ${date}</p>
+                    <p class="meta"><strong>Nome:</strong> ${fields.nome.value || 'Não informado'}</p>
+                    <p class="meta"><strong>Responsável:</strong> ${fields.responsavel.value || 'Não informado'}</p>
+                    <p class="meta"><strong>Ramal:</strong> ${fields.ramal.value || 'Não informado'}</p>
+                    <p class="meta"><strong>Celular corporativo:</strong> ${fields.celular.value || 'Não informado'}</p>
+                    <p class="meta"><strong>Modelo:</strong> ${fields.modelo.value || 'Não informado'}</p>
+                    <p class="meta"><strong>Código Pulsus:</strong> ${fields.pulsus.value || 'Não informado'}</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Serial</th>
+                                <th>Hostname</th>
+                                <th>MACs</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows.length ? rows.map(row => `
+                                <tr>
+                                    <td>${row.serial}</td>
+                                    <td>${row.hostname}</td>
+                                    <td>${row.macs}</td>
+                                </tr>
+                            `).join('') : `
+                                <tr>
+                                    <td colspan="3">Nenhum equipamento listado.</td>
+                                </tr>
+                            `}
+                        </tbody>
+                    </table>
+
+                    <p style="margin-top: 24px;">Declaro estar ciente da responsabilidade pelo uso e conservação do equipamento descrito acima.</p>
+
+                    <div class="signatures">
+                        <div class="signature">
+                            <div>Colaborador</div>
+                        </div>
+                        <div class="signature">
+                            <div>Responsável</div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const newWindow = window.open('', '_blank');
+            if (!newWindow) {
+                statusDiv.textContent = '❌ Não foi possível abrir a nova aba. Verifique o bloqueador de pop-ups.';
+                statusDiv.className = 'error';
+                return;
+            }
+            newWindow.document.write(termoHtml);
+            newWindow.document.close();
+            newWindow.focus();
+        });
+    </script>
 </body>
 </html>
