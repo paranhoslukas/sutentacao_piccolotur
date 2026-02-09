@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Termo de Sustentação - Piccolotur</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Arial", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px;
+      background: #f3f4f6;
+      color: #1f2933;
+    }
+
+    .termo {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      color: #4b5563;
+    }
+
+    .dados {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px 24px;
+      margin-bottom: 24px;
+    }
+
+    .campo {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 14px;
+    }
+
+    .campo span {
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .texto {
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .assinatura {
+      margin-top: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .assinatura .linha {
+      flex: 1 1 280px;
+      border-top: 1px solid #1f2933;
+      padding-top: 8px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .acoes {
+      margin-top: 32px;
+      text-align: right;
+    }
+
+    .acoes button {
+      background: #2563eb;
+      border: none;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .acoes button:hover {
+      background: #1d4ed8;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+
+      .termo {
+        box-shadow: none;
+        border-radius: 0;
+        padding: 0;
+      }
+
+      .acoes {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="termo">
+    <header>
+      <h1>Termo de Sustentação</h1>
+      <p>Piccolotur - Importação de Notas Fiscais</p>
+    </header>
+
+    <div class="dados">
+      <div class="campo">
+        <span>Nome</span>
+        <strong>{{nome}}</strong>
+      </div>
+      <div class="campo">
+        <span>CPF</span>
+        <strong>{{cpf}}</strong>
+      </div>
+      <div class="campo">
+        <span>Endereço</span>
+        <strong>{{endereco}}</strong>
+      </div>
+      <div class="campo">
+        <span>Serviço</span>
+        <strong>{{servico}}</strong>
+      </div>
+      <div class="campo">
+        <span>Valor</span>
+        <strong>{{valor}}</strong>
+      </div>
+      <div class="campo">
+        <span>Data do registro</span>
+        <strong>{{dataFormatada}}</strong>
+      </div>
+    </div>
+
+    <div class="texto">
+      Declaramos que o(a) cliente acima identificado(a) solicitou os serviços descritos, comprometendo-se com os termos definidos pela Piccolotur.
+      Este termo deve ser impresso, assinado e arquivado junto aos documentos fiscais correspondentes.
+    </div>
+
+    <div class="assinatura">
+      <div class="linha">Assinatura do(a) cliente</div>
+      <div class="linha">{{cidade}}, {{dataFormatada}}</div>
+    </div>
+
+    <div class="acoes no-print">
+      <button type="button" onclick="window.print()">Imprimir termo</button>
+    </div>
+  </section>
+</body>
+</html>
